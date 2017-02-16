@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        
+        <title></title>
+        <meta charset="utf-8">
+            
+            <script type="text/javascript" src="/js/d3.v3.min.js"></script>
+            <script type="text/javascript" src="/js/topojson.v1.min.js"></script>
+            <link href="/js/bootstrap.min.css" type="text/css" rel="stylesheet">
+                    
+                    
+                    <style type="text/css">
+                        
+                        body {
+                            
+                            padding-top: 60px; /* 60px to make the container go all the way to the bottom of the topbar */
+                        }
+                    
+                    .boundary {
+                        fill: none;
+                        stroke: #777;
+                        //stroke-dasharray: 2,2;
+                        //stroke-linejoin: round;
+                    }
+                    
+                    .LD
+                    {
+                        fill:yellow;
+                    }
+                    
+                    .Lab
+                    {
+                        fill:red;
+                    }
+                    
+                    .Con
+                    {
+                        fill:blue;
+                    }
+                    
+                    .Green { fill: grey; }
+                    .SPK { fill: grey; }
+                    .A { fill: grey; }
+                    .DU { fill: grey; }
+                    .SDLP { fill: grey; }
+                    .SF { fill: grey; }
+                    .Ind { fill: grey; }
+                    .SNP { fill: grey; }
+                    .PC { fill: grey; }
+                    
+                    .Noc {fill:Lime; }
+                    
+                    #bigNumbers{
+                        font-size:500%;
+                        line-height:100%;
+                    }
+                    
+                        </style>
+                    </head>
+    <body onLoad="loadApi()">
+        
+        <div class="navbar navbar-inverse navbar-fixed-top">
+            <div class="navbar-inner">
+                <div class="container">
+                    <a class="brand" href="#">The Power of Youth</a>
+                    <a class="brand" href="details.html">Details</a>
+                    <a class="brand" href="https://twitter.com/jjcasswell">@jjcasswell</a>
+                    
+                </div>
+            </div>
+        </div>
+        <div  class="container">
+                <div class="row span12">
+                    
+                    <div id="main"></div>
+                    
+                </div>
+                <div class="row span12">
+                    <div id="bigNumbers">0</div>
+                </div>
+                <div id="controls" class="row span12">
+                    <button onclick="updateColours()">Start</button>
+                    <button onclick="updateTurnout(0.5)">Turnout 50%</button>
+                    <button onclick="updateTurnout(0.75)">Turnout 75%</button>
+                    <button onclick="updateTurnout(1.0)">Turnout 100%</button>
+                    <button onclick="resetColours()">Reset</button>
+                </div>
+
+            
+        </div>
+        
+        <script>
+            
+            var width = 960,
+            height = 1160;
+            
+            var svg = d3.select("#main").append("svg")
+            .attr("width", width)
+            .attr("height", height);
+            
+            var globalVoteData;
+            var globalChangeCount=0;
+            
+            function loadApi(){
+               
+               loadMap();
+               loadData();
+            }
+        
+        
+        function loadMap(){
+            "use strict";
+            
+            
+            d3.json("tjData.json", function(error, uk) {
+                    
+                    
+                    var projection = d3.geo.albers()
+                    .center([0, 55.4])
+                    .rotate([4.4, 0])
+                    .parallels([50, 60])
+                    .scale(6000)
+                    .translate([width / 2, height / 2]);
+                    
+                    var path = d3.geo.path()
+                    .projection(projection);
+                    
+                    
+                    var subUnits = topojson.feature(uk,uk.objects.mapData);
+                    
+                    svg.selectAll(".subunit")
+                    .data(topojson.feature(uk, uk.objects.mapData).features)
+                    .enter().append("path")
+                    .attr("id", function(d) { return d.id; })
+                    .attr("d", path)
+                    .attr("class", "boundary");
+                    });
+                    
+                    
+                    
+                
+        }
+        
+        function loadData()
+        {
+            console.log("loading data");
+            
+            
+            d3.csv("voteData.csv",parseData);
+        }
+        
+        function parseData(error, data){
+            
+           //console.log(data);
+            
+            var voteData= new Array();
+            
+            data.forEach(function(r){
+                         
+                         var obj = {
+                         ONSid: r.constID,
+                         majority: parseInt(r.majority),
+                         youngVotersTotal: parseInt(r.missingVoters),
+                         originalPartyName: r.partyName,
+                         currentPartyName: r.partyName
+                         };
+                         
+                         voteData.push(obj);
+                         
+                         });
+                         
+                         
+                         globalVoteData = voteData;
+                         console.log(voteData);
+                         
+                         delete data;
+                         
+                         
+            
+        }
+        
+        function updateTurnout(newTurnout){
+            
+            console.log(newTurnout);
+            
+            //cycle through ids
+            //calc new turnout
+            // if bigger than majority
+            // update class
+            
+            // call update colours
+            
+            
+            
+            globalVoteData.forEach(function(v){
+                                   
+                                   var newVotersAtTurnout = v.youngVotersTotal*(newTurnout - 0.44);
+                                   
+                                   if (newVotersAtTurnout > v.majority){
+                                   
+                                        if(v.currentPartyName != "Noc")
+                                        {
+                                            globalChangeCount++
+                                        }
+                                   
+                                        v.currentPartyName = "Noc";
+                                   }
+                                   else{
+                                        v.currentPartyName = v.originalPartyName;
+                                   }
+                                   
+                                   });
+                                   
+            
+            updateColours();
+            
+        }
+        
+        
+        function updateColours(){
+            
+            // cycle through ids
+            //select svg with element
+            //change the class
+            
+            console.log("changing colours");
+            
+            console.log(globalChangeCount);
+            
+            d3.select("#bigNumbers").text(globalChangeCount);
+            
+            globalVoteData.forEach(function(v){
+                                   
+                                   
+                                   d3.select("path#"+v.ONSid)
+                                   .classed(v.currentPartyName,true);
+                                   
+                                   });
+            
+            
+        }
+        
+        
+        function resetColours(){
+            
+            // cycle through ids
+            //select svg with element
+            //change the class
+            
+            console.log("changing colours");
+            
+            globalChangeCount = 0;
+            
+            d3.select("#bigNumbers").text(globalChangeCount);
+            
+            globalVoteData.forEach(function(v){
+                                   
+                                   
+                                   d3.select("path#"+v.ONSid)
+                                   .classed(v.currentPartyName,false)
+                                   .classed(v.originalPartyName,true);
+                                   
+                                   });
+                                   
+                                   
+        }
+        
+        
+            </script>
+        
+    </body>
+</html>
+
+
+
